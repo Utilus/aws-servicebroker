@@ -42,6 +42,7 @@ Metadata:
       - MessageRetentionPeriod
       - ReceiveMessageWaitTimeSeconds
       - UsedeadletterQueue
+      - DeadletterQueueMaxReceiveCount
       - VisibilityTimeout
       - FifoQueue
       - ContentBasedDeduplication
@@ -62,9 +63,11 @@ Metadata:
         default: Fifo Queue
       ContentBasedDeduplication:
         default: Content Based Deduplication
+      DeadletterQueueMaxReceiveCount:
+        default: Dead Letter Queue Max Receive Count
 Parameters:
   ContentBasedDeduplication:
-    Description: specifies whether to enable content-based deduplication, only applies
+    Description: Specifies whether to enable content-based deduplication, only applies
       to FIFO queues
     Type: String
     AllowedValues:
@@ -145,16 +148,20 @@ Resources:
         - CreateDeadLetterQueue
         - deadLetterTargetArn:
             !GetAtt
-            - MyDeadLetterQueue
+            - SQSDeadLetterQueue
             - Arn
-          maxReceiveCount: 5
+          maxReceiveCount: !Ref DeadletterQueueMaxReceiveCount
         - !Ref AWS::NoValue
       VisibilityTimeout: !Ref VisibilityTimeout
-  MyDeadLetterQueue:
+  SQSDeadLetterQueue:
     Condition: CreateDeadLetterQueue
     Type: AWS::SQS::Queue
     Properties:
-      FifoQueue: !Ref FifoQueue
+      FifoQueue:
+        !If
+        - IsFifo
+        - true
+        - !Ref AWS::NoValue
   AWSSBInjectedIAMUserRole:
     Type: AWS::IAM::Role
     Properties:
@@ -292,21 +299,21 @@ Outputs:
     Value:
       !If
       - CreateDeadLetterQueue
-      - !Ref MyDeadLetterQueue
+      - !Ref SQSDeadLetterQueue
       - ''
   DeadLetterQueueARN:
     Description: ARN of newly created SQS Queue
     Value:
       !If
       - CreateDeadLetterQueue
-      - !GetAtt MyDeadLetterQueue.Arn
+      - !GetAtt SQSDeadLetterQueue.Arn
       - ''
   DeadLetterQueueName:
     Description: Name newly created SQS Queue
     Value:
       !If
       - CreateDeadLetterQueue
-      - !GetAtt MyDeadLetterQueue.QueueName
+      - !GetAtt SQSDeadLetterQueue.QueueName
       - ''
   SqsAwsAccessKeyId:
     Value: !Sub "ssm:${AWSSBInjectedIAMUserCreator.AsbAccessKeyId}"
