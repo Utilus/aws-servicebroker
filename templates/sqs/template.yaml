@@ -105,6 +105,11 @@ Parameters:
     - 'true'
     - 'false'
     Default: 'false'
+  DeadletterQueueMaxReceiveCount:
+    Description: >-
+      The number of times a message is delivered to the source queue before being moved to the dead-letter queue.
+    Type: Number
+    Default: '5'
   VisibilityTimeout:
     Description: This should be longer than the time it would take to process and
       delete a message, this should not exceed 12 hours.
